@@ -1,0 +1,1198 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ControlSI Vertical Stack</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@500;600;700;800&display=swap">
+
+<style>
+/* Consola de sala de control: bandas a todo el ancho, esquinas vivas, retícula de hairlines
+   y color reservado para señal según la filosofía HMI de la ISA-101. Oscuro por defecto. */
+:root{
+  --bg:#0A0D11; --panel:#111519; --panel-2:#161B21; --panel-3:#1E252D;
+  --fg:#E7EBEF; --fg-mid:#9EAAB7; --fg-dim:#8795A3;
+  --line:#222A33; --line-2:#333E4A;
+  --blue:#4C8AE6; --blue-dim:#16304F; --amber:#E8A33D; --teal:#2BB8A8; --red:#DC4530;
+  --sp:clamp(52px,6.5vw,92px);
+  --display:"Saira Condensed","Arial Narrow Bold","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --maxw:1240px; --navh:62px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#E9ECF0; --panel:#FFFFFF; --panel-2:#F4F6F9; --panel-3:#E3E8ED;
+    --fg:#0E1317; --fg-mid:#49555F; --fg-dim:#5F6B75;
+    --line:#D3DAE1; --line-2:#B6C0CA;
+    --blue:#0B4FB0; --blue-dim:#DCE7F8; --amber:#8F5A0E; --teal:#0C7F73; --red:#C3321E;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#E9ECF0; --panel:#FFFFFF; --panel-2:#F4F6F9; --panel-3:#E3E8ED;
+  --fg:#0E1317; --fg-mid:#49555F; --fg-dim:#5F6B75;
+  --line:#D3DAE1; --line-2:#B6C0CA;
+  --blue:#0B4FB0; --blue-dim:#DCE7F8; --amber:#8F5A0E; --teal:#0C7F73; --red:#C3321E;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.58;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:70;background:var(--bg)}
+.wrap{max-width:var(--maxw);margin-inline:auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--display);font-weight:700;line-height:.96;margin:0;text-wrap:balance;text-transform:uppercase;letter-spacing:.005em}
+p{margin:0}
+a{color:inherit}
+section[id],div[id="top"]{scroll-margin-top:calc(var(--navh) + 14px + env(safe-area-inset-top,0px))}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tag{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--fg-dim)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+::selection{background:var(--blue);color:#fff}
+
+.skip{position:absolute;left:-9999px;top:0;z-index:100;background:var(--blue);color:#fff;padding:12px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.skip:focus{left:max(18px,env(safe-area-inset-left,0px));top:calc(8px + env(safe-area-inset-top,0px))}
+
+.mk{position:relative}
+.mk::before,.mk::after{content:"";position:absolute;width:7px;height:7px;pointer-events:none;border-color:var(--line-2);border-style:solid}
+.mk::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+.mk::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+
+/* ---------- nav ---------- */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:60;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(14px) saturate(1.5);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:12px;min-height:var(--navh);padding-block:8px}
+.prog{position:absolute;left:0;bottom:-1px;height:2px;background:var(--blue);width:0;transition:width .1s linear;z-index:2}
+.brand{display:flex;align-items:center;text-decoration:none;font-family:var(--display);font-size:25px;font-weight:800;letter-spacing:-.005em;line-height:1;padding:6px 0}
+.brand i{font-style:normal}
+.brand b{background:var(--red);color:#fff;padding:1px 6px 2px;margin-left:2px;font-weight:800}
+.nlinks{display:flex;gap:1px;margin-left:auto;align-items:center}
+.nlinks a:not(.btn){text-decoration:none;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mid);padding:14px 11px;position:relative;transition:color .18s}
+.nlinks a:not(.btn)::after{content:"";position:absolute;left:11px;right:11px;bottom:8px;height:1.5px;background:var(--blue);transform:scaleX(0);transform-origin:left;transition:transform .24s cubic-bezier(.2,.7,.3,1)}
+.nlinks a:not(.btn):hover{color:var(--fg)}
+.nlinks a:not(.btn):hover::after,.nlinks a[aria-current="true"]::after{transform:scaleX(1)}
+.nlinks a[aria-current="true"]{color:var(--fg)}
+.lang{display:flex;border:1px solid var(--line-2);margin-left:8px;flex:none}
+.lang button{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--line-2);color:var(--fg-dim);padding:11px 11px;cursor:pointer;transition:background .18s,color .18s;min-height:44px}
+.lang button:last-child{border-right:none}
+.lang button:hover{color:var(--fg);background:var(--panel-2)}
+.lang button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.burger{display:none;margin-left:auto;background:none;border:1px solid var(--line-2);color:var(--fg);width:46px;height:46px;cursor:pointer;align-items:center;justify-content:center;flex:none}
+.burger svg{width:19px;height:19px}
+.burger .x{display:none}
+.burger[aria-expanded="true"] .m{display:none}
+.burger[aria-expanded="true"] .x{display:block}
+.mnav{border-top:1px solid var(--line);background:var(--bg)}
+.mnav ul{list-style:none;margin:0;padding:0}
+.mnav a{display:flex;align-items:center;justify-content:space-between;gap:12px;text-decoration:none;font-family:var(--mono);font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg);padding:17px max(18px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.mnav a span{font-family:var(--mono);font-size:10.5px;color:var(--fg-dim);letter-spacing:.12em}
+.mnav a[aria-current="true"]{color:var(--blue);box-shadow:inset 2px 0 0 var(--blue)}
+
+/* ---------- botones ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:13px 18px;border:1px solid transparent;background:none;position:relative;overflow:hidden;min-height:46px}
+.btn span{position:relative;z-index:1}
+.btn svg{width:13px;height:13px;flex:none;position:relative;z-index:1;transition:transform .24s cubic-bezier(.2,.7,.3,1)}
+.btn:hover svg{transform:translateX(4px)}
+.btn--p{background:var(--red);color:#fff}
+.btn--p::before{content:"";position:absolute;inset:0;background:var(--fg);transform:translateY(101%);transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.btn--p:hover::before{transform:translateY(0)}
+.btn--p:hover{color:var(--bg)}
+.btn--g{border-color:var(--line-2);color:var(--fg)}
+.btn--g::before{content:"";position:absolute;inset:0;background:var(--panel-3);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.btn--g:hover::before{transform:scaleX(1)}
+.btn--sm{padding:11px 15px;font-size:11px;min-height:40px}
+
+/* ---------- hero ---------- */
+.hero{border-bottom:1px solid var(--line);background:var(--panel)}
+.hero .wrap{padding-block:clamp(44px,6.5vw,86px)}
+.hgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,396px);gap:clamp(30px,4.5vw,56px);align-items:end}
+.hmeta{display:flex;align-items:center;gap:9px;margin-bottom:18px;flex-wrap:wrap}
+.dot{width:6px;height:6px;background:var(--teal);flex:none}
+h1{font-size:clamp(50px,9vw,116px);letter-spacing:-.012em;font-weight:800}
+h1 .ln{display:block;overflow:hidden}
+h1 .ln>span{display:block;transform:translateY(102%);animation:up .7s cubic-bezier(.16,1,.3,1) forwards}
+h1 .ln:nth-child(2)>span{animation-delay:.09s}
+h1 .ln:nth-child(3)>span{animation-delay:.18s}
+@keyframes up{to{transform:translateY(0)}}
+h1 em{font-style:normal;color:var(--blue)}
+.lede{margin-top:24px;font-size:clamp(15px,1.6vw,18px);color:var(--fg-mid);max-width:56ch;line-height:1.56;border-left:2px solid var(--line-2);padding-left:18px}
+.lede b{color:var(--fg);font-weight:600}
+.cta{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+.creds{display:flex;gap:10px;margin-top:30px;padding-top:22px;border-top:1px solid var(--line);flex-wrap:wrap}
+.cred{display:flex;flex-direction:column;gap:3px;border:1px solid var(--line-2);padding:10px 14px;min-width:0;background:var(--bg)}
+.cred b{font-size:13px;font-weight:600;line-height:1.2}
+.cred span{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
+
+/* pila ISA-95 */
+.stk{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--bg);min-width:0}
+.stk-h,.stk-f{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;background:var(--panel-2);gap:10px;flex-wrap:wrap}
+.stk-h{border-bottom:1px solid var(--line)}
+.stk-f{justify-content:flex-start;gap:8px}
+.stk-f svg{width:12px;height:12px;color:var(--teal);flex:none}
+.lvl{display:grid;grid-template-columns:38px minmax(0,1fr) 14px;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;background:none;border:none;border-bottom:1px solid var(--line);padding:14px 13px;font-family:var(--body);color:var(--fg);position:relative;transition:background .2s;min-height:48px}
+.lvl::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--blue);transform:scaleY(0);transition:transform .26s cubic-bezier(.2,.7,.3,1)}
+.lvl:hover,.lvl[aria-expanded="true"]{background:var(--panel-2)}
+.lvl[aria-expanded="true"]::before{transform:scaleY(1)}
+.lvl .n{font-family:var(--display);font-size:22px;font-weight:800;color:var(--fg-dim);line-height:1;transition:color .2s}
+.lvl[aria-expanded="true"] .n,.lvl:hover .n{color:var(--blue)}
+.lvl .t{font-size:13.5px;font-weight:600;line-height:1.25;min-width:0}
+.lvl .t i{display:block;font-style:normal;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;color:var(--fg-dim);margin-top:3px;text-transform:uppercase}
+.lvl .c{width:14px;height:14px;color:var(--fg-dim);transition:transform .26s}
+.lvl[aria-expanded="true"] .c{transform:rotate(90deg);color:var(--blue)}
+.lb{border-bottom:1px solid var(--line);background:var(--panel);padding:15px 13px;font-size:13.5px;color:var(--fg-mid);line-height:1.55}
+.lb .tg{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+.lb .tg span{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line-2);padding:4px 7px;color:var(--fg-mid)}
+
+/* ---------- motivos ---------- */
+.rtb{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.rtb div{background:var(--panel);padding:24px 20px;min-width:0}
+.rtb b{display:block;font-family:var(--display);font-size:23px;text-transform:uppercase;margin-bottom:7px;line-height:1.05}
+.rtb p{font-size:13px;color:var(--fg-mid);line-height:1.5}
+
+/* ---------- bandas ---------- */
+.band{padding-block:var(--sp);border-bottom:1px solid var(--line)}
+.band--p{background:var(--panel)}
+.sh{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,46ch);gap:clamp(20px,3.5vw,48px);align-items:end;margin-bottom:clamp(28px,3.6vw,44px)}
+.sh h2{font-size:clamp(34px,5.4vw,64px);letter-spacing:-.008em}
+.idx{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--blue);display:block;margin-bottom:12px}
+.sh p{color:var(--fg-mid);font-size:15px;line-height:1.6}
+
+/* de X a Y */
+.shift{display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.sf{background:var(--panel);padding:26px 21px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.sf .fr{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-dim);flex-wrap:wrap}
+.sf .fr s{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:1px}
+.sf .fr svg{width:13px;height:13px;color:var(--blue);flex:none}
+.sf h4{font-size:25px;line-height:1.05}
+.sf p{font-size:13.5px;color:var(--fg-mid);line-height:1.52}
+
+/* servicios */
+.svcs{border:1px solid var(--line);background:var(--panel)}
+.svc{display:grid;grid-template-columns:62px minmax(0,1.05fr) minmax(0,1.25fr);gap:clamp(14px,2.4vw,32px);padding:clamp(22px,2.6vw,30px) clamp(16px,2.2vw,24px);border-bottom:1px solid var(--line);position:relative;transition:background .25s}
+.svc:last-child{border-bottom:none}
+.svc:hover{background:var(--panel-2)}
+.svc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--blue);transform:scaleY(0);transform-origin:top;transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.svc:hover::before{transform:scaleY(1)}
+.svc .lv{font-family:var(--display);font-size:clamp(26px,3vw,37px);font-weight:800;color:var(--line-2);line-height:.9;transition:color .25s;letter-spacing:-.01em}
+.svc:hover .lv{color:var(--blue)}
+.svc h3{font-size:clamp(23px,2.6vw,31px);margin-bottom:9px}
+.svc .d{font-size:14px;color:var(--fg-mid);line-height:1.55}
+.svc ul{margin:0;padding:0;list-style:none;display:grid;gap:9px;align-content:start}
+.svc li{font-size:13.5px;color:var(--fg-mid);display:grid;grid-template-columns:14px minmax(0,1fr);gap:9px;line-height:1.45}
+.svc li::before{content:"—";color:var(--blue);font-family:var(--mono);font-size:11px;line-height:1.7}
+
+/* doble eje */
+.tabs{display:flex;border:1px solid var(--line);border-bottom:none;width:max-content;max-width:100%}
+.tabs button{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:var(--panel-2);border:none;border-right:1px solid var(--line);color:var(--fg-dim);padding:15px 22px;cursor:pointer;transition:background .2s,color .2s;position:relative;min-height:48px}
+.tabs button:last-child{border-right:none}
+.tabs button:hover{color:var(--fg)}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--fg)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--blue)}
+.grid6{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.cell{background:var(--panel);padding:24px 20px 20px;display:flex;flex-direction:column;gap:9px;min-width:0;transition:background .25s}
+.cell:hover{background:var(--panel-2)}
+.cell .num{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--fg-dim)}
+.cell h4{font-size:25px;line-height:1.05}
+.cell p{font-size:13.5px;color:var(--fg-mid);line-height:1.5}
+.cell .kv{margin-top:auto;padding-top:13px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--teal);line-height:1.6}
+
+/* tecnologías */
+.tt{border:1px solid var(--line);background:var(--panel)}
+.tr{display:grid;grid-template-columns:118px minmax(0,1fr);border-bottom:1px solid var(--line);transition:background .25s}
+.tr:last-child{border-bottom:none}
+.tr:hover{background:var(--panel-2)}
+.tr .l{padding:18px 15px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:3px;justify-content:center;background:var(--panel-2)}
+.tr .l b{font-family:var(--display);font-size:30px;font-weight:800;color:var(--blue);line-height:.9}
+.tr .l span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim)}
+.tr .r{padding:15px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
+.chip{display:flex;flex-direction:column;gap:2px;text-decoration:none;border:1px solid var(--line-2);padding:10px 13px;min-width:0;transition:border-color .2s,transform .2s,background .2s;background:var(--bg);position:relative;padding-right:28px}
+.chip::after{content:"↗";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--fg-dim);transition:color .2s}
+.chip:hover{border-color:var(--blue);transform:translateY(-2px);background:var(--panel-3)}
+.chip:hover::after{color:var(--blue)}
+.chip b{font-size:13px;font-weight:600;line-height:1.2}
+.chip span{font-family:var(--mono);font-size:9.5px;color:var(--fg-dim);letter-spacing:.04em}
+
+/* cifras */
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.m{background:var(--panel);padding:26px 19px 22px;min-width:0;position:relative;overflow:hidden}
+.m .bar{position:absolute;left:0;bottom:0;height:2px;background:var(--blue);width:0;transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
+.m b{display:block;font-family:var(--display);font-size:clamp(45px,5.8vw,64px);font-weight:800;color:var(--fg);line-height:.88;font-variant-numeric:tabular-nums;letter-spacing:-.018em}
+.m b i{font-style:normal;color:var(--blue);font-size:.55em;vertical-align:.35em;margin-right:2px}
+.m span{display:block;margin-top:11px;font-size:12.5px;color:var(--fg-mid);line-height:1.4}
+
+/* casos */
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.cs{background:var(--panel);padding:24px 20px;display:flex;flex-direction:column;gap:11px;min-width:0;position:relative}
+.cs .ph{position:absolute;top:0;right:0;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#17110A;background:var(--amber);padding:4px 9px}
+.cs .st{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim)}
+.cs h4{font-size:25px;padding-right:70px}
+.cs p{font-size:13.5px;color:var(--fg-mid);line-height:1.5}
+.cs .rs{display:flex;gap:22px;margin-top:auto;padding-top:15px;border-top:1px solid var(--line);flex-wrap:wrap}
+.cs .rs b{display:block;font-family:var(--display);font-size:30px;color:var(--line-2);line-height:1}
+.cs .rs span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-dim);margin-top:4px}
+
+/* I+D */
+.rdw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,372px);gap:clamp(24px,4vw,50px);align-items:start}
+.rdl{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
+.rd{background:var(--panel);padding:21px 20px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:16px;align-items:start;transition:background .25s}
+.rd:hover{background:var(--panel-2)}
+.rd .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--blue);line-height:1.5;border-right:1px solid var(--line);padding-right:12px;min-height:100%}
+.rd b{display:block;font-size:14.5px;font-weight:600;line-height:1.3}
+.rd span{display:block;font-size:13px;color:var(--fg-mid);margin-top:5px;line-height:1.5}
+.note{border:1px solid var(--blue);background:var(--blue-dim);padding:24px 20px}
+.note h4{font-size:24px;color:var(--fg);margin-bottom:10px}
+.note p{font-size:13.5px;color:var(--fg-mid);line-height:1.55}
+.note .bg{font-family:var(--display);font-size:60px;font-weight:800;color:var(--blue);line-height:.9;margin:16px 0 6px;font-variant-numeric:tabular-nums}
+
+/* recursos */
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.res a{background:var(--panel);padding:21px 18px;text-decoration:none;display:flex;flex-direction:column;gap:6px;min-width:0;transition:background .22s}
+.res a:hover{background:var(--panel-2)}
+.res a b{font-family:var(--display);font-size:21px;text-transform:uppercase;line-height:1.08}
+.res a span{font-size:12.5px;color:var(--fg-mid);line-height:1.45}
+.res a em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-top:auto;padding-top:10px;display:flex;align-items:center;gap:6px}
+.res a:hover em::after{transform:translateX(3px)}
+.res a em::after{content:"→";transition:transform .22s}
+
+/* contacto */
+.cband{background:var(--panel);border-bottom:1px solid var(--line)}
+.cband .wrap{padding-block:var(--sp)}
+.cgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,428px);gap:clamp(30px,4.5vw,56px);align-items:start}
+.cband h2{font-size:clamp(36px,5.4vw,66px);letter-spacing:-.01em}
+.cband .sub{margin-top:18px;font-size:16px;color:var(--fg-mid);max-width:46ch;line-height:1.56}
+.ci{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:28px}
+.ci div{background:var(--bg);padding:15px 16px}
+.ci .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--fg-dim)}
+.ci .v{font-size:14.5px;margin-top:4px;line-height:1.45;word-break:break-word}
+.ci .v a{color:var(--blue);text-decoration:none;border-bottom:1px solid var(--line-2)}
+.ci .v a:hover{border-color:var(--blue)}
+.form{border:1px solid var(--line);background:var(--bg);padding:26px 22px}
+.form h3{font-size:27px;margin-bottom:6px}
+.form .hint{font-size:13px;color:var(--fg-mid);margin-bottom:20px;line-height:1.5}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fl{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0}
+.fl label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-dim)}
+.fl label u{text-decoration:none;color:var(--red);margin-left:3px}
+.fl input,.fl select,.fl textarea{font-family:var(--body);font-size:15px;color:var(--fg);background:var(--panel);border:1px solid var(--line-2);padding:13px 12px;width:100%;border-radius:0;transition:border-color .18s,box-shadow .18s;min-height:46px}
+.fl input:focus,.fl select:focus,.fl textarea:focus{outline:none;border-color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.fl [aria-invalid="true"]{border-color:var(--red);box-shadow:inset 0 -2px 0 var(--red)}
+.fl .err{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--red);line-height:1.4}
+.fl .err[hidden]{display:none}
+.fl textarea{resize:vertical;min-height:92px}
+.form .btn--p{width:100%;margin-top:4px}
+.ok{display:none;margin-top:14px;padding:13px;border:1px solid var(--teal);font-size:13px;line-height:1.5;color:var(--fg)}
+.ok.on{display:block}
+
+/* pie */
+.foot{padding-block:34px;background:var(--bg)}
+.fg{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+.foot p{font-size:12.5px;color:var(--fg-dim);line-height:1.5}
+
+/* volver arriba */
+.top{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;width:46px;height:46px;border:1px solid var(--line-2);background:var(--panel);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .25s,transform .25s,border-color .2s}
+.top.on{opacity:1;pointer-events:auto;transform:none}
+.top:hover{border-color:var(--blue);color:var(--blue)}
+.top svg{width:17px;height:17px}
+
+/* ---------- movimiento ---------- */
+.rv{opacity:.55;transform:translateY(14px);transition:opacity .6s cubic-bezier(.2,.7,.3,1),transform .6s cubic-bezier(.2,.7,.3,1)}
+.rv.in{opacity:1;transform:none}
+
+/* entrada escalonada: los hijos entran uno tras otro */
+.stg>*{opacity:.5;transform:translateY(20px);transition:opacity .55s cubic-bezier(.2,.7,.3,1),transform .55s cubic-bezier(.2,.7,.3,1);transition-delay:var(--d,0ms)}
+.stg.in>*{opacity:1;transform:none}
+.stg>*:nth-child(1){--d:0ms}
+.stg>*:nth-child(2){--d:70ms}
+.stg>*:nth-child(3){--d:140ms}
+.stg>*:nth-child(4){--d:210ms}
+.stg>*:nth-child(5){--d:280ms}
+.stg>*:nth-child(6){--d:350ms}
+
+/* la pila del hero se arma al cargar */
+.stk .lvl,.stk .lb{animation:drop .5s cubic-bezier(.16,1,.3,1) backwards}
+@keyframes drop{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+/* indicador de estado en vivo */
+.dot{animation:bl 2.4s steps(1) infinite}
+@keyframes bl{0%,62%{opacity:1}63%,100%{opacity:.22}}
+#clk{color:var(--teal);letter-spacing:.1em}
+
+/* riel de nivel pegado al scroll de servicios */
+.svcwrap{display:grid;grid-template-columns:84px minmax(0,1fr);gap:18px;align-items:start}
+.rail{position:sticky;top:calc(var(--navh) + 26px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:5px}
+.rail .tag{font-size:9px;letter-spacing:.11em;margin-bottom:7px;line-height:1.3}
+.rail b{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:19px;font-weight:800;line-height:1;border:1px solid var(--line);color:var(--fg-dim);padding:10px 0;background:var(--panel);transition:color .32s,background .32s,border-color .32s,transform .32s cubic-bezier(.2,.7,.3,1)}
+.rail b.on{color:#fff;background:var(--blue);border-color:var(--blue);transform:translateX(5px)}
+
+/* micro-interacciones */
+.svc .lv{transition:color .25s,transform .25s cubic-bezier(.2,.7,.3,1)}
+.svc:hover .lv{transform:translateX(4px)}
+.cell:hover,.sf:hover,.res a:hover{box-shadow:inset 0 2px 0 var(--blue)}
+.sf{transition:background .25s,box-shadow .25s}
+.sf:hover{background:var(--panel-2)}
+.sf .fr svg{transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.sf:hover .fr svg{transform:translateX(4px)}
+.cs:hover{background:var(--panel-2)}
+.cs{transition:background .25s}
+.rd .k{transition:color .25s}
+.rd:hover .k{color:var(--teal)}
+.m:hover b{color:var(--blue);transition:color .25s}
+
+/* cambio de pestaña */
+.grid6.swap{animation:swin .4s cubic-bezier(.2,.7,.3,1)}
+@keyframes swin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+@media (max-width:980px){
+  .nlinks{display:none}
+  .burger{display:flex}
+  .nav .wrap{gap:10px}
+}
+@media (min-width:981px){ .mnav{display:none!important} }
+@media (max-width:900px){
+  .hgrid,.rdw,.cgrid,.sh{grid-template-columns:minmax(0,1fr)}
+  .sh{gap:16px}
+  .svc{grid-template-columns:44px minmax(0,1fr)}
+  .svc ul{grid-column:2}
+  .svcwrap{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .tr{grid-template-columns:minmax(0,1fr)}
+  .tr .l{border-right:none;border-bottom:1px solid var(--line);flex-direction:row;align-items:baseline;gap:9px}
+}
+@media (max-width:520px){ .fr2{grid-template-columns:minmax(0,1fr)} .tabs{width:100%} .tabs button{flex:1;padding:15px 10px} }
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  h1 .ln>span{transform:none}
+  .rv{opacity:1;transform:none}
+  .stg>*{opacity:1;transform:none;transition-delay:0ms!important}
+}
+</style>
+
+<a class="skip" href="#main" data-i18n="sk">Saltar al contenido</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><i>Control</i><b>SI</b></a>
+    <nav class="nlinks" id="dnav">
+      <a href="#arq" data-i18n="n1">Arquitectura</a>
+      <a href="#svc" data-i18n="n2">Servicios</a>
+      <a href="#mer" data-i18n="n3">Mercados</a>
+      <a href="#tec" data-i18n="n4">Tecnologías</a>
+      <a href="#idi" data-i18n="n5">I+D+i</a>
+      <a class="btn btn--p btn--sm" href="#con"><span data-i18n="n6">Diagnóstico</span></a>
+      <span class="lang" role="group" aria-label="Idioma / Language / Langue">
+        <button type="button" data-lang="es" aria-pressed="true">ES</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+      </span>
+    </nav>
+    <button class="burger" id="burger" type="button" aria-expanded="false" aria-controls="mnav" aria-label="Menú">
+      <svg class="m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="prog" id="prog" aria-hidden="true"></div>
+  </div>
+  <div class="mnav" id="mnav" hidden>
+    <ul>
+      <li><a href="#arq"><span data-i18n="a0s">01</span><span data-i18n="n1">Arquitectura</span></a></li>
+      <li><a href="#svc"><span data-i18n="v0s">02</span><span data-i18n="n2">Servicios</span></a></li>
+      <li><a href="#mer"><span data-i18n="i0s">03</span><span data-i18n="n3">Mercados</span></a></li>
+      <li><a href="#tec"><span data-i18n="t0s">04</span><span data-i18n="n4">Tecnologías</span></a></li>
+      <li><a href="#idi"><span data-i18n="d0s">07</span><span data-i18n="n5">I+D+i</span></a></li>
+      <li><a href="#con"><span data-i18n="k0s">09</span><span data-i18n="n6">Diagnóstico</span></a></li>
+    </ul>
+    <div style="padding:16px max(18px,env(safe-area-inset-left,0px))">
+      <span class="lang" role="group" aria-label="Idioma / Language / Langue">
+        <button type="button" data-lang="es" aria-pressed="true">ES</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hgrid">
+      <div>
+        <div class="hmeta">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="tag" data-i18n="h0">Control System Integration S.A.C. · Lima · operando desde 2001</span>
+          <span class="tag mono" id="clk" aria-hidden="true"></span>
+        </div>
+        <h1>
+          <span class="ln"><span data-i18n="h1a">Del sensor</span></span>
+          <span class="ln"><span data-i18n="h1b">a la</span></span>
+          <span class="ln"><span><em data-i18n="h1c">decisión</em></span></span>
+        </h1>
+        <p class="lede" data-i18n-html="h2">Empresa tecnológica <b>verticalmente integrada</b> en la Industria 4.0. Cubrimos los cinco niveles de la arquitectura ISA-95, de la instrumentación en campo a la automatización cognitiva en la capa de negocio. Un integrador, una arquitectura, una responsabilidad.</p>
+        <div class="cta">
+          <a class="btn btn--p" href="#con"><span data-i18n="h3">Agendar diagnóstico</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="btn btn--g" href="#arq"><span data-i18n="h4">Ver la arquitectura</span></a>
+        </div>
+        <div class="creds">
+          <div class="cred"><b>Rockwell Automation</b><span data-i18n="h5a">Silver System Integrator</span></div>
+          <div class="cred"><b>AVEVA PI System</b><span data-i18n="h5b">Certified System Integrator</span></div>
+        </div>
+      </div>
+
+      <div class="stk mk">
+        <div class="stk-h">
+          <span class="tag" data-i18n="s0">Arquitectura ISA-95</span>
+          <span class="tag" style="color:var(--teal)" data-i18n="s1">Cobertura L0–L4</span>
+        </div>
+        <div id="stack"></div>
+        <div class="stk-f">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+          <span class="tag" data-i18n="s2">Toque un nivel para ver el detalle</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rtb stg">
+  <div><b data-i18n="r1t">Certificaciones vigentes</b><p data-i18n="r1d">Silver System Integrator de Rockwell Automation y Certified System Integrator de AVEVA PI System.</p></div>
+  <div><b data-i18n="r2t">Cobertura L0 a L4</b><p data-i18n="r2d">Un solo responsable del transmisor en campo al tablero de dirección, sin costuras entre proveedores.</p></div>
+  <div><b data-i18n="r3t">24 años en operación</b><p data-i18n="r3d">Más de 450 proyectos propios y 2500 ejecutados junto a nuestros socios tecnológicos en el mundo.</p></div>
+  <div><b data-i18n="r4t">Respeta lo ya instalado</b><p data-i18n="r4d">Modernizamos sobre la base existente. Su inversión en control y campo se conserva y se extiende.</p></div>
+</div>
+
+<section class="band band--p" id="arq">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="a0">[ 01 ] Planteamiento</span>
+        <h2 data-i18n-html="a1">Qué significa<br>integración vertical</h2>
+      </div>
+      <p data-i18n="a2">La mayoría de proveedores resuelve un nivel y deja el resto a terceros: el instrumentista no habla con el de SCADA, el de SCADA no habla con el de analítica, y el dato muere en el camino. ControlSI diseña, implementa y mantiene la cadena completa, de modo que el valor del dato se conserva desde el transmisor hasta el tablero de dirección.</p>
+    </div>
+    <div class="shift stg">
+      <article class="sf">
+        <div class="fr"><s data-i18n="m1a">Islas por proveedor</s><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span data-i18n="m1b">Arquitectura única</span></div>
+        <h4 data-i18n="m1t">De sistemas aislados a una sola cadena</h4>
+        <p data-i18n="m1d">Cuando cada nivel lo resuelve un proveedor distinto, la integración es responsabilidad del cliente. Aquí es nuestra.</p>
+      </article>
+      <article class="sf">
+        <div class="fr"><s data-i18n="m2a">Reportes de turno</s><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span data-i18n="m2b">Decisión en línea</span></div>
+        <h4 data-i18n="m2t">De informar a decidir</h4>
+        <p data-i18n="m2d">El dato deja de llegar en Excel al día siguiente y pasa a sostener la decisión mientras el proceso aún está corriendo.</p>
+      </article>
+      <article class="sf">
+        <div class="fr"><s data-i18n="m3a">Mantenimiento correctivo</s><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span data-i18n="m3b">Predictivo</span></div>
+        <h4 data-i18n="m3t">De reaccionar a anticipar</h4>
+        <p data-i18n="m3d">La misma instrumentación que ya tiene instalada, leída con modelos, avisa antes de la parada en lugar de después.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="svc">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="v0">[ 02 ] Capacidades</span>
+        <h2 data-i18n-html="v1">Servicios<br>por nivel</h2>
+      </div>
+      <p data-i18n="v2">Cada capacidad indica el nivel ISA-95 en el que interviene. Así se identifica de inmediato dónde entramos en su arquitectura actual y qué habilita la capa siguiente.</p>
+    </div>
+    <div class="svcwrap">
+      <aside class="rail" id="rail" aria-hidden="true">
+        <span class="tag" data-i18n="v3">Nivel ISA-95</span>
+        <b data-lv="L4">L4</b><b data-lv="L3">L3</b><b data-lv="L2">L2</b><b data-lv="L1">L1</b><b data-lv="L0">L0</b>
+      </aside>
+      <div class="svcs stg" id="svcs"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band band--p" id="mer">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="i0">[ 03 ] Mercados</span>
+        <h2 data-i18n-html="i1">Por sector<br>o por resultado</h2>
+      </div>
+      <p data-i18n="i2">Dos formas de entrar. Si busca a alguien que conozca su industria, empiece por sector. Si tiene un problema definido y le da igual la etiqueta, empiece por resultado.</p>
+    </div>
+    <div class="rv">
+      <div class="tabs" role="tablist" id="tablist">
+        <button type="button" role="tab" id="tb-sec" aria-controls="pn-sec" aria-selected="true" data-i18n="i3">Por sector</button>
+        <button type="button" role="tab" id="tb-out" aria-controls="pn-out" aria-selected="false" tabindex="-1" data-i18n="i4">Por resultado</button>
+      </div>
+      <div class="grid6 stg" id="pn-sec" role="tabpanel" aria-labelledby="tb-sec" tabindex="0"></div>
+      <div class="grid6 stg" id="pn-out" role="tabpanel" aria-labelledby="tb-out" tabindex="0" hidden></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="tec">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="t0">[ 04 ] Plataformas</span>
+        <h2 data-i18n-html="t1">Tecnologías<br>por nivel</h2>
+      </div>
+      <p data-i18n="t2">Nuestras certificaciones y acuerdos de partner no son un muro de logos: cada plataforma ocupa un lugar definido en la arquitectura. Así se lee qué tecnología resuelve qué nivel.</p>
+    </div>
+    <div class="tt stg">
+      <div class="tr"><div class="l"><b>L4</b><span data-i18n="t_l4">Negocio</span></div><div class="r">
+        <a class="chip" href="https://lincebi.com/" target="_blank" rel="noopener"><b>LinceBI</b><span data-i18n="t_pd">Partner de desarrollo avanzado</span></a>
+        <a class="chip" href="https://julialang.org/" target="_blank" rel="noopener"><b>Julia</b><span data-i18n="t_cc">Cómputo científico</span></a>
+      </div></div>
+      <div class="tr"><div class="l"><b>L3</b><span data-i18n="t_l3">Operaciones</span></div><div class="r">
+        <a class="chip" href="https://www.aveva.com/es-es/products/aveva-pi-system/" target="_blank" rel="noopener"><b>AVEVA PI System</b><span data-i18n="t_csi">Certified System Integrator</span></a>
+        <a class="chip" href="https://idboxrt.com/" target="_blank" rel="noopener"><b>IDboxRT</b><span data-i18n="t_pd2">Partner de desarrollo avanzado</span></a>
+      </div></div>
+      <div class="tr"><div class="l"><b>L2</b><span data-i18n="t_l2">Supervisión</span></div><div class="r">
+        <a class="chip" href="https://www.rockwellautomation.com/en-us.html" target="_blank" rel="noopener"><b>Rockwell Automation</b><span data-i18n="t_ssi">Silver System Integrator</span></a>
+      </div></div>
+      <div class="tr"><div class="l"><b>L1</b><span data-i18n="t_l1">Control</span></div><div class="r">
+        <a class="chip" href="https://www.barbara.tech/" target="_blank" rel="noopener"><b>Barbara</b><span data-i18n="t_pd3">Partner de desarrollo avanzado</span></a>
+        <a class="chip" href="https://jltmobile.com/" target="_blank" rel="noopener"><b>JLT Mobile</b><span data-i18n="t_ci">Cómputo industrial</span></a>
+      </div></div>
+      <div class="tr"><div class="l"><b>L0</b><span data-i18n="t_l0">Campo</span></div><div class="r">
+        <a class="chip" href="https://accutroninstruments.com/" target="_blank" rel="noopener"><b>Accutron Instruments</b><span data-i18n="t_da">Distribuidor autorizado</span></a>
+        <a class="chip" href="https://www.sgrwin.com/es/" target="_blank" rel="noopener"><b>SGRWin</b><span data-i18n="t_rf">Redes de fibra industrial</span></a>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band band--p">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="f0">[ 05 ] Trayectoria</span>
+        <h2 data-i18n-html="f1">ControlSI<br>en cifras</h2>
+      </div>
+      <p data-i18n="f2">Acumulado desde el año 2001 en el mercado peruano.</p>
+    </div>
+    <div class="mg stg" id="mg">
+      <div class="m"><b><i>+</i><u data-to="24" style="text-decoration:none">0</u></b><span data-i18n="f_a">Años de presencia en el mercado peruano</span><div class="bar" data-w="100"></div></div>
+      <div class="m"><b><i>+</i><u data-to="15" style="text-decoration:none">0</u></b><span data-i18n="f_b">Sectores económicos e industriales atendidos</span><div class="bar" data-w="62"></div></div>
+      <div class="m"><b><i>+</i><u data-to="450" style="text-decoration:none">0</u></b><span data-i18n="f_c">Proyectos ejecutados por nuestra empresa</span><div class="bar" data-w="78"></div></div>
+      <div class="m"><b><i>+</i><u data-to="2500" style="text-decoration:none">0</u></b><span data-i18n="f_d">Proyectos ejecutados con socios en el mundo</span><div class="bar" data-w="94"></div></div>
+      <div class="m"><b><i>+</i><u data-to="100" style="text-decoration:none">0</u></b><span data-i18n="f_e">Clientes industriales TOP atendidos</span><div class="bar" data-w="70"></div></div>
+      <div class="m"><b><i>+</i><u data-to="30" style="text-decoration:none">0</u> M</b><span data-i18n="f_f">Dólares facturados y de valor agregado</span><div class="bar" data-w="85"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="cas">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="c0">[ 06 ] Evidencia</span>
+        <h2 data-i18n-html="c1">Casos de<br>aplicación</h2>
+      </div>
+      <p data-i18n="c2">La sección que más pesa en una decisión de compra industrial y la que hoy no existe en el sitio. La estructura está lista; falta completarla con proyectos reales, cifras verificadas y autorización del cliente.</p>
+    </div>
+    <div class="cg stg">
+      <article class="cs"><span class="ph" data-i18n="c_ph">Ejemplo</span><span class="st" data-i18n="c_s1">Minería · Concentradora</span><h4 data-i18n="c_t1">Historiador unificado</h4><p data-i18n="c_d1">Estructura sugerida: situación inicial, arquitectura desplegada, nivel ISA-95 intervenido, plazo de ejecución y resultado medido.</p><div class="rs"><div><b>—</b><span data-i18n="c_k1">Indicador 1</span></div><div><b>—</b><span data-i18n="c_k2">Indicador 2</span></div></div></article>
+      <article class="cs"><span class="ph" data-i18n="c_ph2">Ejemplo</span><span class="st" data-i18n="c_s2">Cemento · Horno</span><h4 data-i18n="c_t2">Optimización energética</h4><p data-i18n="c_d2">Reemplazar por un proyecto real. Un caso con cifra verificable convierte mucho más que tres párrafos de descripción corporativa.</p><div class="rs"><div><b>—</b><span data-i18n="c_k3">Indicador 1</span></div><div><b>—</b><span data-i18n="c_k4">Indicador 2</span></div></div></article>
+      <article class="cs"><span class="ph" data-i18n="c_ph3">Ejemplo</span><span class="st" data-i18n="c_s3">Alimentos · Envasado</span><h4 data-i18n="c_t3">Visión artificial</h4><p data-i18n="c_d3">Cuando el cliente no autoriza su nombre, funciona igual describiendo el sector, la escala de planta y el resultado.</p><div class="rs"><div><b>—</b><span data-i18n="c_k5">Indicador 1</span></div><div><b>—</b><span data-i18n="c_k6">Indicador 2</span></div></div></article>
+    </div>
+  </div>
+</section>
+
+<section class="band band--p" id="idi">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="d0">[ 07 ] I+D+i</span>
+        <h2 data-i18n-html="d1">Investigación<br>y desarrollo</h2>
+      </div>
+      <p data-i18n="d2">La investigación aplicada y el desarrollo tecnológico son actividades principales de ControlSI, con un equipo de ingenieros y científicos que trabaja a nivel mundial sobre problemas concretos de Industria 4.0.</p>
+    </div>
+    <div class="rdw rv">
+      <div class="rdl">
+        <div class="rd"><div class="k">PE<br>30309</div><div><b data-i18n="d_t1">Proyectos I+D+i bajo la Ley N.° 30309</b><span data-i18n="d_d1">Formulamos y ejecutamos proyectos calificados ante el CONCYTEC, de modo que la inversión en innovación acceda a la deducción tributaria adicional que establece la norma.</span></div></div>
+        <div class="rd"><div class="k">EU<br>HE</div><div><b data-i18n="d_t2">Horizonte Europa</b><span data-i18n="d_d2">Participación en consorcios de investigación del programa marco europeo, con acceso a resultados y tecnología antes de su llegada al mercado regional.</span></div></div>
+        <div class="rd"><div class="k">ES<br>CDTI</div><div><b data-i18n="d_t3">CDTI de España</b><span data-i18n="d_d3">Proyectos bajo el marco del Centro para el Desarrollo Tecnológico y la Innovación, que respalda el desarrollo conjunto con socios tecnológicos europeos.</span></div></div>
+      </div>
+      <aside class="note mk">
+        <h4 data-i18n="d_nt">Ley 30309 en la práctica</h4>
+        <p data-i18n="d_nd">Para una gerencia industrial, un proyecto de automatización calificado como I+D+i deja de ser únicamente un gasto de capital y pasa a tener un tratamiento tributario distinto.</p>
+        <div class="bg">+24</div>
+        <p class="tag" data-i18n="d_nf">Años formulando proyectos tecnológicos</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="rec">
+  <div class="wrap">
+    <div class="sh rv">
+      <div>
+        <span class="idx" data-i18n="u0">[ 08 ] Recursos</span>
+        <h2 data-i18n-html="u1">Para equipos<br>de ingeniería</h2>
+      </div>
+      <p data-i18n="u2">Material de consulta para quien ya está evaluando una arquitectura. Secciones propuestas, pendientes de producción de contenido.</p>
+    </div>
+    <div class="res stg">
+      <a href="#con"><b data-i18n="u_t1">CSI Open Academy</b><span data-i18n="u_d1">Programa de capacitación y transferencia tecnológica en plataformas de automatización.</span><em data-i18n="u_c1">Ver programa</em></a>
+      <a href="#con"><b data-i18n="u_t2">Notas técnicas</b><span data-i18n="u_d2">Guías de arquitectura, integración OPC UA y buenas prácticas de modelo de activos.</span><em data-i18n="u_c2">Explorar</em></a>
+      <a href="#con"><b data-i18n="u_t3">Fichas de plataforma</b><span data-i18n="u_d3">Alcance y requisitos de cada tecnología que implementamos, por nivel ISA-95.</span><em data-i18n="u_c3">Consultar</em></a>
+      <a href="#con"><b data-i18n="u_t4">Soporte</b><span data-i18n="u_d4">Canal de atención para clientes con sistemas en operación y contratos de mantenimiento.</span><em data-i18n="u_c4">Contactar</em></a>
+    </div>
+  </div>
+</section>
+
+<section class="cband" id="con">
+  <div class="wrap">
+    <div class="cgrid">
+      <div class="rv">
+        <span class="idx" data-i18n="k0">[ 09 ] Contacto</span>
+        <h2 data-i18n-html="k1">Conversemos<br>sobre su operación</h2>
+        <p class="sub" data-i18n="k2">Un diagnóstico inicial sin costo sobre el estado de su arquitectura: qué niveles están cubiertos, dónde se pierde el dato y qué habilitaría la capa siguiente. Respondemos dentro de las 24 horas.</p>
+        <div class="ci">
+          <div><div class="k" data-i18n="k_a">Dirección</div><div class="v">Av. República de Colombia N.° 159 A · San Isidro, Lima 15046</div></div>
+          <div><div class="k" data-i18n="k_b">Correo</div><div class="v mono">informes@controlsi.com.pe</div></div>
+          <div><div class="k" data-i18n="k_c">Teléfono</div><div class="v mono">(51) 771-5772</div></div>
+          <div><div class="k" data-i18n="k_d">LinkedIn</div><div class="v"><a href="https://www.linkedin.com/" target="_blank" rel="noopener">ControlSI Industry 4.0 Experts</a></div></div>
+        </div>
+      </div>
+
+      <form class="form mk rv" id="f" novalidate>
+        <h3 data-i18n="k3">Solicitar diagnóstico</h3>
+        <p class="hint" data-i18n="k4">Mientras más contexto nos dé sobre su planta, más concreta será la primera conversación.</p>
+        <div class="fr2">
+          <div class="fl"><label for="c-nom"><span data-i18n="k_f1">Nombres</span><u aria-hidden="true">*</u></label><input id="c-nom" name="nom" type="text" autocomplete="given-name" required aria-required="true" aria-describedby="e-nom"><span class="err" id="e-nom" hidden></span></div>
+          <div class="fl"><label for="c-ape"><span data-i18n="k_f2">Apellidos</span></label><input id="c-ape" name="ape" type="text" autocomplete="family-name"></div>
+        </div>
+        <div class="fr2">
+          <div class="fl"><label for="c-emp"><span data-i18n="k_f3">Empresa</span></label><input id="c-emp" name="emp" type="text" autocomplete="organization"></div>
+          <div class="fl"><label for="c-car"><span data-i18n="k_f4">Cargo</span></label><input id="c-car" name="car" type="text" autocomplete="organization-title"></div>
+        </div>
+        <div class="fr2">
+          <div class="fl"><label for="c-mail"><span data-i18n="k_f5">Correo corporativo</span><u aria-hidden="true">*</u></label><input id="c-mail" name="mail" type="email" autocomplete="email" required aria-required="true" aria-describedby="e-mail"><span class="err" id="e-mail" hidden></span></div>
+          <div class="fl"><label for="c-tel"><span data-i18n="k_f6">Teléfono</span></label><input id="c-tel" name="tel" type="tel" autocomplete="tel" placeholder="+51"></div>
+        </div>
+        <div class="fr2">
+          <div class="fl"><label for="c-sec"><span data-i18n="k_f7">Sector</span></label><select id="c-sec" name="sec"></select></div>
+          <div class="fl"><label for="c-niv"><span data-i18n="k_f8">Nivel de interés</span></label><select id="c-niv" name="niv"></select></div>
+        </div>
+        <div class="fl"><label for="c-msg"><span data-i18n="k_f9">Describa el reto operativo</span></label><textarea id="c-msg" name="msg"></textarea></div>
+        <button class="btn btn--p" type="submit"><span data-i18n="k5">Enviar solicitud</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <div class="ok" id="ok" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap fg">
+    <a class="brand" href="#top"><i>Control</i><b>SI</b></a>
+    <p data-i18n-html="z1">Control System Integration S.A.C. · Industry 4.0 Experts<br>San Isidro, Lima · Perú</p>
+    <p class="tag" data-i18n="z2">Propuesta de rediseño · no es el sitio en producción</p>
+  </div>
+</footer>
+
+<button class="top" id="toTop" type="button" aria-label="Volver arriba">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+</button>
+
+<script>
+(function(){
+  "use strict";
+  var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var DATA = {
+    es:{
+      lvl:[
+        ["L4","Planeamiento de negocio","ERP · Dirección","Automatización cognitiva sobre el contexto operativo: sistemas que interpretan el estado de la planta y recomiendan o ejecutan la decisión, en lugar de limitarse a reportar.",["Automatización cognitiva","Agentes de decisión","LinceBI"]],
+        ["L3","Gestión de operaciones","MES · Historiador","Inteligencia operativa y analítica industrial de datos. El historiador de planta se convierte en fuente única de verdad, con modelo de activos y series de tiempo contextualizadas.",["AVEVA PI System","IDboxRT","Analítica predictiva"]],
+        ["L2","Supervisión y control","SCADA · HMI","Arquitecturas SCADA y HMI avanzados de control recíproco, sobre plataformas Rockwell Automation con integración por OPC UA.",["Rockwell Automation","SCADA","OPC UA"]],
+        ["L1","Control de proceso","PLC · DCS","Programación, migración y sintonía de lazos de control, con capacidad de inferencia en el borde donde la latencia o la conectividad lo exigen.",["PLC / DCS","EdgeAI · Barbara","Redes industriales"]],
+        ["L0","Proceso e instrumentación","Campo · Sensórica","Instrumentación, sensórica y conectividad en condiciones reales de planta, mina y pozo: donde empieza el dato y donde más barato resulta asegurar su calidad.",["Accutron Instruments","Visión artificial","Fibra SGRWin"]]
+      ],
+      svc:[
+        ["L1·2","Automatización industrial","Control de procesos sobre plataformas Rockwell Automation, del lazo de control a la red industrial completa.",["Programación y migración de PLC, DCS y sistemas de seguridad","Arquitecturas SCADA y HMI avanzados de control recíproco","Redes industriales, integración OPC UA y buses de campo","Puesta en marcha, sintonía de lazos y soporte post-arranque"]],
+        ["L2·3","Inteligencia operativa","El historiador de planta como fuente única de verdad: contexto, trazabilidad y tiempo real sobre AVEVA PI System e IDboxRT.",["Implementación y migración de PI System (AVEVA / OSIsoft)","Modelo de activos, jerarquías y Asset Framework","Tableros operativos en tiempo real por área y por turno","Indicadores de proceso: OEE, disponibilidad, rendimiento, calidad"]],
+        ["L3","Analítica de data industrial","Del dato histórico al modelo predictivo, con ingeniería de datos pensada para series de tiempo de proceso.",["Pipelines de series temporales y data lakes industriales","Mantenimiento predictivo y detección temprana de anomalías","Modelos de optimización de proceso y consumo energético","Inteligencia de negocio sobre LinceBI y cómputo científico en Julia"]],
+        ["L0·1","EdgeAI y Edge Computing","Inferencia en el borde, donde la latencia y la conectividad no permiten depender de la nube: planta, mina, pozo.",["Orquestación de nodos de borde con Barbara","Visión artificial para inspección, conteo y seguridad operacional","Despliegue de modelos sobre equipamiento industrial certificado","Conectividad robusta: fibra SGRWin y terminales JLT Mobile"]],
+        ["L3·4","AIIoT y automatización cognitiva","Sistemas que no solo reportan: interpretan el estado del proceso y recomiendan o ejecutan la acción correctiva.",["Algoritmos cognitivos integrados al lazo de control","Asistentes de operación sobre el contexto real de planta","Cierre automático de lazos de decisión operativa","Interfaces HMI de control recíproco humano-máquina"]],
+        ["TRV","Investigación y proyectos","Equipo de ingenieros y científicos dedicado a investigación aplicada, con acceso a marcos de financiamiento en Perú y Europa.",["Proyectos I+D+i acogidos a la Ley N.° 30309","Formulación bajo Horizonte Europa y CDTI de España","Pruebas de concepto y escalamiento a producción","Transferencia tecnológica y capacitación vía CSI Open Academy"]]
+      ],
+      sec:[
+        ["Minería","Concentradoras, chancado, molienda y relaveras. Operación continua con instrumentación expuesta y conectividad difícil en interior mina.","Disponibilidad · Tonelaje · Ley de cabeza"],
+        ["Hidrocarburos","Refinación, almacenamiento y transporte. Entornos clasificados, medición fiscal y requisitos de seguridad funcional.","Balance volumétrico · SIS · Custody transfer"],
+        ["Cemento","Hornos, molinos y despacho. Procesos térmicos de alta inercia donde la optimización energética define el margen.","kcal/kg clínker · kWh/t · Marcha de horno"],
+        ["Alimentos","Líneas de proceso y envasado con trazabilidad de lote, cambios de formato frecuentes y exigencia sanitaria.","OEE · Trazabilidad de lote · Merma"],
+        ["Energía","Generación, subestaciones y distribución. Telemetría dispersa geográficamente y despacho en tiempo real.","Disponibilidad · Calidad de energía"],
+        ["Agua","Captación, plantas de tratamiento y redes. Telecontrol sobre territorios extensos con infraestructura heterogénea.","Caudal · Presión de red · Agua no facturada"]
+      ],
+      out:[
+        ["Eficiencia operativa","Subir el rendimiento de la planta sin inversión en activos nuevos, sobre la instrumentación ya instalada.","OEE · Rendimiento · Merma"],
+        ["Gestión de activos","Pasar de mantenimiento correctivo a predictivo con los datos que la planta ya genera.","MTBF · Paradas no programadas"],
+        ["Ciberseguridad OT","Segmentar y proteger la red industrial sin interrumpir la operación ni perder visibilidad.","IEC 62443 · Segmentación"],
+        ["Eficiencia energética","Medir, atribuir y reducir el consumo por línea, por equipo y por tonelada producida.","kWh/t · Factor de potencia"],
+        ["Calidad y trazabilidad","Trazar el lote de punta a punta y sostener la auditoría con el dato del proceso, no con registros manuales.","Trazabilidad · Reproceso"],
+        ["Autonomía del equipo","Transferir el conocimiento para que su personal opere y evolucione el sistema sin depender del integrador.","Capacitación · Documentación"]
+      ],
+      lvls:["L0–L1 · Instrumentación y control","L2 · SCADA y supervisión","L3 · Inteligencia operativa","L4 · Automatización cognitiva","Arquitectura completa"],
+      pick:"Seleccione…", other:"Otro",
+      ph:"Ej.: tenemos PI System pero operaciones no lo usa; los reportes de turno siguen saliendo en Excel.",
+      e_req:"Este campo es obligatorio.", e_mail:"Ingrese un correo válido.",
+      errv:"Revise los campos marcados para continuar.",
+      okv:"Demostración de la propuesta: el formulario valida los campos pero aún no envía. En producción se conecta al CRM o al correo informes@controlsi.com.pe.",
+      menu:"Menú", toTop:"Volver arriba"
+    },
+    en:{
+      n1:"Architecture",n2:"Services",n3:"Markets",n4:"Technologies",n5:"R&D",n6:"Assessment",
+      sk:"Skip to content",
+      h0:"Control System Integration S.A.C. · Lima · operating since 2001",
+      h1a:"From sensor",h1b:"to",h1c:"decision",
+      h2:"A <b>vertically integrated</b> technology company in Industry 4.0. We cover all five levels of the ISA-95 architecture, from field instrumentation to cognitive automation at the business layer. One integrator, one architecture, one accountable party.",
+      h3:"Book an assessment",h4:"See the architecture",
+      h5a:"Silver System Integrator",h5b:"Certified System Integrator",
+      s0:"ISA-95 architecture",s1:"Coverage L0–L4",s2:"Tap a level to see the detail",
+      r1t:"Current certifications",r1d:"Silver System Integrator for Rockwell Automation and Certified System Integrator for AVEVA PI System.",
+      r2t:"Coverage L0 to L4",r2d:"A single party accountable from the field transmitter to the management dashboard, with no seams between vendors.",
+      r3t:"24 years in operation",r3d:"Over 450 projects of our own and 2,500 delivered alongside our technology partners worldwide.",
+      r4t:"Built on what you have",r4d:"We modernise on the installed base. Your existing investment in control and field equipment is preserved and extended.",
+      a0:"[ 01 ] The problem",a0s:"01",a1:"What vertical<br>integration means",
+      a2:"Most suppliers solve one level and leave the rest to third parties: the instrumentation contractor never talks to the SCADA team, the SCADA team never talks to the analytics team, and the data dies along the way. ControlSI designs, implements and maintains the full chain, so the value of the data survives from the transmitter to the management dashboard.",
+      m1a:"Vendor silos",m1b:"One architecture",m1t:"From isolated systems to a single chain",m1d:"When every level belongs to a different supplier, integration becomes the client's problem. Here it is ours.",
+      m2a:"Shift reports",m2b:"Live decisions",m2t:"From reporting to deciding",m2d:"Data stops arriving in a spreadsheet the next morning and starts supporting the decision while the process is still running.",
+      m3a:"Corrective maintenance",m3b:"Predictive",m3t:"From reacting to anticipating",m3d:"The same instrumentation you already have, read through models, warns you before the shutdown instead of after it.",
+      v0:"[ 02 ] Capabilities",v0s:"02",v1:"Services<br>by level",v2:"Each capability states the ISA-95 level where it operates. That makes it immediately clear where we fit into your current architecture and what the next layer unlocks.",v3:"ISA-95 level",
+      i0:"[ 03 ] Markets",i0s:"03",i1:"By sector<br>or by outcome",i2:"Two ways in. If you want someone who knows your industry, start with sector. If you have a defined problem and the label does not matter, start with outcome.",
+      i3:"By sector",i4:"By outcome",
+      t0:"[ 04 ] Platforms",t0s:"04",t1:"Technologies<br>by level",t2:"Our certifications and partner agreements are not a wall of logos: each platform holds a defined place in the architecture. That shows which technology solves which level.",
+      t_l4:"Business",t_l3:"Operations",t_l2:"Supervision",t_l1:"Control",t_l0:"Field",
+      t_pd:"Advanced development partner",t_pd2:"Advanced development partner",t_pd3:"Advanced development partner",
+      t_cc:"Scientific computing",t_csi:"Certified System Integrator",t_ssi:"Silver System Integrator",
+      t_ci:"Industrial computing",t_da:"Authorised distributor",t_rf:"Industrial fibre networks",
+      f0:"[ 05 ] Track record",f1:"ControlSI<br>in figures",f2:"Cumulative since 2001 in the Peruvian market.",
+      f_a:"Years operating in the Peruvian market",f_b:"Economic and industrial sectors served",f_c:"Projects delivered by our company",f_d:"Projects delivered with partners worldwide",f_e:"Top industrial clients served",f_f:"US dollars invoiced and in added value",
+      c0:"[ 06 ] Evidence",c1:"Applied<br>case studies",c2:"The section that weighs most in an industrial purchase decision and the one missing from the site today. The structure is ready; it needs real projects, verified figures and client approval.",
+      c_ph:"Example",c_ph2:"Example",c_ph3:"Example",
+      c_s1:"Mining · Concentrator",c_t1:"Unified historian",c_d1:"Suggested structure: starting situation, architecture deployed, ISA-95 level addressed, delivery timeline and measured outcome.",
+      c_s2:"Cement · Kiln",c_t2:"Energy optimisation",c_d2:"Replace with a real project. One case with a verifiable figure converts far better than three paragraphs of corporate description.",
+      c_s3:"Food · Packaging",c_t3:"Machine vision",c_d3:"When the client will not authorise their name, it still works to describe the sector, the plant scale and the result.",
+      c_k1:"Metric 1",c_k2:"Metric 2",c_k3:"Metric 1",c_k4:"Metric 2",c_k5:"Metric 1",c_k6:"Metric 2",
+      d0:"[ 07 ] R&D",d0s:"07",d1:"Research and<br>development",d2:"Applied research and technological development are core activities at ControlSI, with a team of engineers and scientists working worldwide on concrete Industry 4.0 problems.",
+      d_t1:"R&D projects under Peruvian Law 30309",d_d1:"We formulate and run projects qualified before CONCYTEC, so that investment in innovation accesses the additional tax deduction the law provides.",
+      d_t2:"Horizon Europe",d_d2:"Participation in research consortia of the European framework programme, with access to results and technology before they reach the regional market.",
+      d_t3:"CDTI of Spain",d_d3:"Projects under the framework of the Centre for the Development of Industrial Technology, which backs joint development with European technology partners.",
+      d_nt:"Law 30309 in practice",d_nd:"For industrial management, an automation project qualified as R&D stops being purely a capital expense and takes on a different tax treatment.",
+      d_nf:"Years formulating technology projects",
+      u0:"[ 08 ] Resources",u1:"For engineering<br>teams",u2:"Reference material for teams already evaluating an architecture. Proposed sections, pending content production.",
+      u_t1:"CSI Open Academy",u_d1:"Training and technology transfer programme on automation platforms.",u_c1:"View programme",
+      u_t2:"Technical notes",u_d2:"Architecture guides, OPC UA integration and asset model best practice.",u_c2:"Explore",
+      u_t3:"Platform datasheets",u_d3:"Scope and requirements for each technology we implement, by ISA-95 level.",u_c3:"Consult",
+      u_t4:"Support",u_d4:"Service channel for clients with systems in operation and maintenance contracts.",u_c4:"Contact",
+      k0:"[ 09 ] Contact",k0s:"09",k1:"Let's talk about<br>your operation",k2:"A no-cost initial assessment of your architecture: which levels are covered, where the data is lost and what the next layer would enable. We reply within 24 hours.",
+      k3:"Request an assessment",k4:"The more context you give us about your plant, the more concrete the first conversation will be.",
+      k_a:"Address",k_b:"Email",k_c:"Phone",k_d:"LinkedIn",
+      k_f1:"First name",k_f2:"Last name",k_f3:"Company",k_f4:"Job title",k_f5:"Work email",k_f6:"Phone",k_f7:"Sector",k_f8:"Level of interest",k_f9:"Describe the operational challenge",
+      k5:"Send request",
+      z1:"Control System Integration S.A.C. · Industry 4.0 Experts<br>San Isidro, Lima · Peru",
+      z2:"Redesign proposal · not the production site",
+      lvl:[
+        ["L4","Business planning","ERP · Management","Cognitive automation on top of operational context: systems that interpret the state of the plant and recommend or execute the decision, rather than merely reporting it.",["Cognitive automation","Decision agents","LinceBI"]],
+        ["L3","Operations management","MES · Historian","Operational intelligence and industrial data analytics. The plant historian becomes the single source of truth, with an asset model and contextualised time series.",["AVEVA PI System","IDboxRT","Predictive analytics"]],
+        ["L2","Supervision and control","SCADA · HMI","SCADA architectures and advanced reciprocal-control HMIs, on Rockwell Automation platforms with OPC UA integration.",["Rockwell Automation","SCADA","OPC UA"]],
+        ["L1","Process control","PLC · DCS","Programming, migration and tuning of control loops, with edge inference wherever latency or connectivity demands it.",["PLC / DCS","EdgeAI · Barbara","Industrial networks"]],
+        ["L0","Process and instrumentation","Field · Sensing","Instrumentation, sensing and connectivity in real plant, mine and wellhead conditions: where the data begins and where its quality is cheapest to secure.",["Accutron Instruments","Machine vision","SGRWin fibre"]]
+      ],
+      svc:[
+        ["L1·2","Industrial automation","Process control on Rockwell Automation platforms, from the control loop to the complete industrial network.",["PLC, DCS and safety system programming and migration","SCADA architectures and advanced reciprocal-control HMIs","Industrial networks, OPC UA integration and fieldbuses","Commissioning, loop tuning and post-startup support"]],
+        ["L2·3","Operational intelligence","The plant historian as single source of truth: context, traceability and real time on AVEVA PI System and IDboxRT.",["PI System implementation and migration (AVEVA / OSIsoft)","Asset model, hierarchies and Asset Framework","Real-time operational dashboards by area and by shift","Process indicators: OEE, availability, performance, quality"]],
+        ["L3","Industrial data analytics","From historical data to the predictive model, with data engineering designed for process time series.",["Time-series pipelines and industrial data lakes","Predictive maintenance and early anomaly detection","Process and energy consumption optimisation models","Business intelligence on LinceBI and scientific computing in Julia"]],
+        ["L0·1","EdgeAI and Edge Computing","Inference at the edge, where latency and connectivity rule out depending on the cloud: plant, mine, wellhead.",["Edge node orchestration with Barbara","Machine vision for inspection, counting and operational safety","Model deployment on certified industrial hardware","Robust connectivity: SGRWin fibre and JLT Mobile terminals"]],
+        ["L3·4","AIIoT and cognitive automation","Systems that do more than report: they interpret the state of the process and recommend or execute the corrective action.",["Cognitive algorithms integrated into the control loop","Operator assistants built on real plant context","Automatic closure of operational decision loops","Reciprocal human-machine control HMIs"]],
+        ["TRV","Research and projects","A team of engineers and scientists dedicated to applied research, with access to funding frameworks in Peru and Europe.",["R&D projects under Peruvian Law 30309","Proposals under Horizon Europe and CDTI of Spain","Proofs of concept and scale-up to production","Technology transfer and training via CSI Open Academy"]]
+      ],
+      sec:[
+        ["Mining","Concentrators, crushing, grinding and tailings. Continuous operation with exposed instrumentation and difficult connectivity underground.","Availability · Throughput · Head grade"],
+        ["Oil and gas","Refining, storage and transport. Classified environments, fiscal metering and functional safety requirements.","Volumetric balance · SIS · Custody transfer"],
+        ["Cement","Kilns, mills and dispatch. High-inertia thermal processes where energy optimisation defines the margin.","kcal/kg clinker · kWh/t · Kiln run"],
+        ["Food","Process and packaging lines with batch traceability, frequent changeovers and sanitary requirements.","OEE · Batch traceability · Waste"],
+        ["Power","Generation, substations and distribution. Geographically dispersed telemetry and real-time dispatch.","Availability · Power quality"],
+        ["Water","Abstraction, treatment plants and networks. Telecontrol across wide territories with heterogeneous infrastructure.","Flow · Network pressure · Non-revenue water"]
+      ],
+      out:[
+        ["Operational efficiency","Raise plant performance without investing in new assets, working on the instrumentation already installed.","OEE · Performance · Waste"],
+        ["Asset management","Move from corrective to predictive maintenance using the data the plant already generates.","MTBF · Unplanned downtime"],
+        ["OT cybersecurity","Segment and protect the industrial network without interrupting operations or losing visibility.","IEC 62443 · Segmentation"],
+        ["Energy efficiency","Measure, attribute and reduce consumption per line, per machine and per tonne produced.","kWh/t · Power factor"],
+        ["Quality and traceability","Trace the batch end to end and sustain the audit on process data rather than manual records.","Traceability · Rework"],
+        ["Team autonomy","Transfer the knowledge so your people can run and evolve the system without depending on the integrator.","Training · Documentation"]
+      ],
+      lvls:["L0–L1 · Instrumentation and control","L2 · SCADA and supervision","L3 · Operational intelligence","L4 · Cognitive automation","Full architecture"],
+      pick:"Select…", other:"Other",
+      ph:"E.g. we have PI System but operations never use it; shift reports still come out of a spreadsheet.",
+      e_req:"This field is required.", e_mail:"Enter a valid email address.",
+      errv:"Check the highlighted fields to continue.",
+      okv:"Proposal demo: the form validates the fields but does not send yet. In production it connects to the CRM or to informes@controlsi.com.pe.",
+      menu:"Menu", toTop:"Back to top"
+    },
+    fr:{
+      n1:"Architecture",n2:"Services",n3:"Marchés",n4:"Technologies",n5:"R&D",n6:"Diagnostic",
+      sk:"Aller au contenu",
+      h0:"Control System Integration S.A.C. · Lima · en activité depuis 2001",
+      h1a:"Du capteur",h1b:"à la",h1c:"décision",
+      h2:"Entreprise technologique <b>verticalement intégrée</b> dans l'Industrie 4.0. Nous couvrons les cinq niveaux de l'architecture ISA-95, de l'instrumentation de terrain à l'automatisation cognitive dans la couche métier. Un intégrateur, une architecture, un seul responsable.",
+      h3:"Demander un diagnostic",h4:"Voir l'architecture",
+      h5a:"Silver System Integrator",h5b:"Certified System Integrator",
+      s0:"Architecture ISA-95",s1:"Couverture L0–L4",s2:"Touchez un niveau pour le détail",
+      r1t:"Certifications en vigueur",r1d:"Silver System Integrator de Rockwell Automation et Certified System Integrator d'AVEVA PI System.",
+      r2t:"Couverture L0 à L4",r2d:"Un seul responsable du transmetteur de terrain au tableau de bord de direction, sans rupture entre fournisseurs.",
+      r3t:"24 ans d'activité",r3d:"Plus de 450 projets en propre et 2 500 réalisés avec nos partenaires technologiques dans le monde.",
+      r4t:"Sur l'existant",r4d:"Nous modernisons sur la base installée. Votre investissement en contrôle et en instrumentation est préservé et prolongé.",
+      a0:"[ 01 ] Le problème",a0s:"01",a1:"Ce que signifie<br>l'intégration verticale",
+      a2:"La plupart des fournisseurs traitent un seul niveau et laissent le reste à des tiers : l'instrumentiste ne parle pas à l'équipe SCADA, l'équipe SCADA ne parle pas à l'analytique, et la donnée se perd en chemin. ControlSI conçoit, met en œuvre et maintient la chaîne complète, afin que la valeur de la donnée se conserve du transmetteur jusqu'au tableau de bord de direction.",
+      m1a:"Silos par fournisseur",m1b:"Architecture unique",m1t:"De systèmes isolés à une chaîne unique",m1d:"Quand chaque niveau appartient à un fournisseur différent, l'intégration devient le problème du client. Ici, elle est le nôtre.",
+      m2a:"Rapports de poste",m2b:"Décision en direct",m2t:"D'informer à décider",m2d:"La donnée cesse d'arriver dans un tableur le lendemain et vient soutenir la décision pendant que le procédé tourne encore.",
+      m3a:"Maintenance corrective",m3b:"Prédictive",m3t:"De réagir à anticiper",m3d:"La même instrumentation déjà installée, lue par des modèles, alerte avant l'arrêt plutôt qu'après.",
+      v0:"[ 02 ] Capacités",v0s:"02",v1:"Services<br>par niveau",v2:"Chaque capacité indique le niveau ISA-95 où elle intervient. On identifie ainsi immédiatement où nous entrons dans votre architecture actuelle et ce que la couche suivante permet.",v3:"Niveau ISA-95",
+      i0:"[ 03 ] Marchés",i0s:"03",i1:"Par secteur<br>ou par résultat",i2:"Deux portes d'entrée. Si vous cherchez quelqu'un qui connaît votre industrie, commencez par le secteur. Si votre problème est défini et que l'étiquette importe peu, commencez par le résultat.",
+      i3:"Par secteur",i4:"Par résultat",
+      t0:"[ 04 ] Plateformes",t0s:"04",t1:"Technologies<br>par niveau",t2:"Nos certifications et accords de partenariat ne sont pas un mur de logos : chaque plateforme occupe une place définie dans l'architecture. On lit ainsi quelle technologie résout quel niveau.",
+      t_l4:"Métier",t_l3:"Opérations",t_l2:"Supervision",t_l1:"Contrôle",t_l0:"Terrain",
+      t_pd:"Partenaire de développement avancé",t_pd2:"Partenaire de développement avancé",t_pd3:"Partenaire de développement avancé",
+      t_cc:"Calcul scientifique",t_csi:"Certified System Integrator",t_ssi:"Silver System Integrator",
+      t_ci:"Informatique industrielle",t_da:"Distributeur agréé",t_rf:"Réseaux de fibre industriels",
+      f0:"[ 05 ] Parcours",f1:"ControlSI<br>en chiffres",f2:"Cumul depuis 2001 sur le marché péruvien.",
+      f_a:"Années de présence sur le marché péruvien",f_b:"Secteurs économiques et industriels servis",f_c:"Projets réalisés par notre entreprise",f_d:"Projets réalisés avec nos partenaires dans le monde",f_e:"Grands clients industriels servis",f_f:"Dollars facturés et en valeur ajoutée",
+      c0:"[ 06 ] Preuves",c1:"Cas<br>d'application",c2:"La section qui pèse le plus dans une décision d'achat industrielle et celle qui manque aujourd'hui sur le site. La structure est prête ; il faut la compléter avec des projets réels, des chiffres vérifiés et l'accord du client.",
+      c_ph:"Exemple",c_ph2:"Exemple",c_ph3:"Exemple",
+      c_s1:"Mines · Concentrateur",c_t1:"Historian unifié",c_d1:"Structure proposée : situation initiale, architecture déployée, niveau ISA-95 concerné, délai d'exécution et résultat mesuré.",
+      c_s2:"Ciment · Four",c_t2:"Optimisation énergétique",c_d2:"À remplacer par un projet réel. Un cas avec un chiffre vérifiable convertit bien mieux que trois paragraphes de description institutionnelle.",
+      c_s3:"Agroalimentaire · Conditionnement",c_t3:"Vision industrielle",c_d3:"Si le client n'autorise pas son nom, cela fonctionne tout aussi bien en décrivant le secteur, la taille de l'usine et le résultat.",
+      c_k1:"Indicateur 1",c_k2:"Indicateur 2",c_k3:"Indicateur 1",c_k4:"Indicateur 2",c_k5:"Indicateur 1",c_k6:"Indicateur 2",
+      d0:"[ 07 ] R&D",d0s:"07",d1:"Recherche et<br>développement",d2:"La recherche appliquée et le développement technologique sont des activités centrales de ControlSI, avec une équipe d'ingénieurs et de scientifiques qui travaille à l'échelle mondiale sur des problèmes concrets d'Industrie 4.0.",
+      d_t1:"Projets R&D au titre de la loi péruvienne 30309",d_d1:"Nous montons et menons des projets qualifiés auprès du CONCYTEC, afin que l'investissement en innovation bénéficie de la déduction fiscale supplémentaire prévue par la loi.",
+      d_t2:"Horizon Europe",d_d2:"Participation à des consortiums de recherche du programme-cadre européen, avec accès aux résultats et aux technologies avant leur arrivée sur le marché régional.",
+      d_t3:"CDTI d'Espagne",d_d3:"Projets dans le cadre du Centre pour le développement technologique et l'innovation, qui soutient le développement conjoint avec des partenaires technologiques européens.",
+      d_nt:"La loi 30309 en pratique",d_nd:"Pour une direction industrielle, un projet d'automatisation qualifié de R&D cesse d'être une simple dépense d'investissement et relève d'un traitement fiscal différent.",
+      d_nf:"Années de montage de projets technologiques",
+      u0:"[ 08 ] Ressources",u1:"Pour les équipes<br>d'ingénierie",u2:"Documentation de référence pour les équipes qui évaluent déjà une architecture. Sections proposées, contenu à produire.",
+      u_t1:"CSI Open Academy",u_d1:"Programme de formation et de transfert technologique sur les plateformes d'automatisation.",u_c1:"Voir le programme",
+      u_t2:"Notes techniques",u_d2:"Guides d'architecture, intégration OPC UA et bonnes pratiques de modèle d'actifs.",u_c2:"Explorer",
+      u_t3:"Fiches plateformes",u_d3:"Périmètre et prérequis de chaque technologie que nous mettons en œuvre, par niveau ISA-95.",u_c3:"Consulter",
+      u_t4:"Support",u_d4:"Canal d'assistance pour les clients dont les systèmes sont en exploitation et sous contrat de maintenance.",u_c4:"Nous contacter",
+      k0:"[ 09 ] Contact",k0s:"09",k1:"Parlons de<br>votre exploitation",k2:"Un diagnostic initial sans frais de votre architecture : quels niveaux sont couverts, où la donnée se perd et ce que la couche suivante permettrait. Nous répondons sous 24 heures.",
+      k3:"Demander un diagnostic",k4:"Plus vous nous donnez de contexte sur votre site, plus la première conversation sera concrète.",
+      k_a:"Adresse",k_b:"Courriel",k_c:"Téléphone",k_d:"LinkedIn",
+      k_f1:"Prénom",k_f2:"Nom",k_f3:"Entreprise",k_f4:"Fonction",k_f5:"Courriel professionnel",k_f6:"Téléphone",k_f7:"Secteur",k_f8:"Niveau d'intérêt",k_f9:"Décrivez l'enjeu opérationnel",
+      k5:"Envoyer la demande",
+      z1:"Control System Integration S.A.C. · Industry 4.0 Experts<br>San Isidro, Lima · Pérou",
+      z2:"Proposition de refonte · ce n'est pas le site en production",
+      lvl:[
+        ["L4","Planification métier","ERP · Direction","Automatisation cognitive sur le contexte opérationnel : des systèmes qui interprètent l'état de l'usine et recommandent ou exécutent la décision, au lieu de se limiter au reporting.",["Automatisation cognitive","Agents de décision","LinceBI"]],
+        ["L3","Gestion des opérations","MES · Historian","Intelligence opérationnelle et analytique industrielle. L'historian devient la source unique de vérité, avec un modèle d'actifs et des séries temporelles contextualisées.",["AVEVA PI System","IDboxRT","Analytique prédictive"]],
+        ["L2","Supervision et contrôle","SCADA · IHM","Architectures SCADA et IHM avancées à contrôle réciproque, sur plateformes Rockwell Automation avec intégration OPC UA.",["Rockwell Automation","SCADA","OPC UA"]],
+        ["L1","Contrôle de procédé","API · DCS","Programmation, migration et réglage des boucles de régulation, avec inférence en périphérie là où la latence ou la connectivité l'imposent.",["API / DCS","EdgeAI · Barbara","Réseaux industriels"]],
+        ["L0","Procédé et instrumentation","Terrain · Capteurs","Instrumentation, capteurs et connectivité en conditions réelles d'usine, de mine et de puits : là où naît la donnée et où sa qualité coûte le moins cher à garantir.",["Accutron Instruments","Vision industrielle","Fibre SGRWin"]]
+      ],
+      svc:[
+        ["L1·2","Automatisation industrielle","Contrôle de procédé sur plateformes Rockwell Automation, de la boucle de régulation au réseau industriel complet.",["Programmation et migration d'API, DCS et systèmes de sécurité","Architectures SCADA et IHM avancées à contrôle réciproque","Réseaux industriels, intégration OPC UA et bus de terrain","Mise en service, réglage de boucles et support après démarrage"]],
+        ["L2·3","Intelligence opérationnelle","L'historian comme source unique de vérité : contexte, traçabilité et temps réel sur AVEVA PI System et IDboxRT.",["Mise en œuvre et migration de PI System (AVEVA / OSIsoft)","Modèle d'actifs, hiérarchies et Asset Framework","Tableaux de bord opérationnels en temps réel par zone et par poste","Indicateurs de procédé : TRS, disponibilité, performance, qualité"]],
+        ["L3","Analytique de données industrielles","De la donnée historique au modèle prédictif, avec une ingénierie de données pensée pour les séries temporelles de procédé.",["Pipelines de séries temporelles et lacs de données industriels","Maintenance prédictive et détection précoce d'anomalies","Modèles d'optimisation de procédé et de consommation d'énergie","Informatique décisionnelle sur LinceBI et calcul scientifique en Julia"]],
+        ["L0·1","EdgeAI et Edge Computing","Inférence en périphérie, là où la latence et la connectivité interdisent de dépendre du cloud : usine, mine, puits.",["Orchestration de nœuds de périphérie avec Barbara","Vision industrielle pour l'inspection, le comptage et la sécurité","Déploiement de modèles sur matériel industriel certifié","Connectivité robuste : fibre SGRWin et terminaux JLT Mobile"]],
+        ["L3·4","AIIoT et automatisation cognitive","Des systèmes qui ne se contentent pas de rapporter : ils interprètent l'état du procédé et recommandent ou exécutent l'action corrective.",["Algorithmes cognitifs intégrés à la boucle de régulation","Assistants d'exploitation sur le contexte réel de l'usine","Bouclage automatique des décisions opérationnelles","IHM de contrôle réciproque homme-machine"]],
+        ["TRV","Recherche et projets","Une équipe d'ingénieurs et de scientifiques dédiée à la recherche appliquée, avec accès à des cadres de financement au Pérou et en Europe.",["Projets R&D au titre de la loi péruvienne 30309","Montage sous Horizon Europe et CDTI d'Espagne","Preuves de concept et passage à l'échelle industrielle","Transfert technologique et formation via CSI Open Academy"]]
+      ],
+      sec:[
+        ["Mines","Concentrateurs, concassage, broyage et résidus. Exploitation continue, instrumentation exposée et connectivité difficile en souterrain.","Disponibilité · Tonnage · Teneur d'alimentation"],
+        ["Hydrocarbures","Raffinage, stockage et transport. Zones classées, comptage fiscal et exigences de sécurité fonctionnelle.","Bilan volumétrique · SIS · Transfert de propriété"],
+        ["Ciment","Fours, broyeurs et expédition. Procédés thermiques à forte inertie où l'optimisation énergétique fait la marge.","kcal/kg clinker · kWh/t · Marche du four"],
+        ["Agroalimentaire","Lignes de procédé et de conditionnement avec traçabilité de lot, changements de format fréquents et exigences sanitaires.","TRS · Traçabilité de lot · Pertes"],
+        ["Énergie","Production, postes et distribution. Télémétrie dispersée géographiquement et dispatching en temps réel.","Disponibilité · Qualité de l'énergie"],
+        ["Eau","Captage, stations de traitement et réseaux. Télécontrôle sur de vastes territoires et infrastructures hétérogènes.","Débit · Pression réseau · Eau non facturée"]
+      ],
+      out:[
+        ["Efficacité opérationnelle","Augmenter la performance de l'usine sans investir dans de nouveaux actifs, sur l'instrumentation déjà installée.","TRS · Performance · Pertes"],
+        ["Gestion des actifs","Passer de la maintenance corrective à la prédictive avec les données que l'usine produit déjà.","MTBF · Arrêts non planifiés"],
+        ["Cybersécurité OT","Segmenter et protéger le réseau industriel sans interrompre l'exploitation ni perdre la visibilité.","CEI 62443 · Segmentation"],
+        ["Efficacité énergétique","Mesurer, affecter et réduire la consommation par ligne, par machine et par tonne produite.","kWh/t · Facteur de puissance"],
+        ["Qualité et traçabilité","Tracer le lot de bout en bout et appuyer l'audit sur la donnée de procédé plutôt que sur des registres manuels.","Traçabilité · Reprises"],
+        ["Autonomie des équipes","Transférer le savoir pour que vos équipes exploitent et fassent évoluer le système sans dépendre de l'intégrateur.","Formation · Documentation"]
+      ],
+      lvls:["L0–L1 · Instrumentation et contrôle","L2 · SCADA et supervision","L3 · Intelligence opérationnelle","L4 · Automatisation cognitive","Architecture complète"],
+      pick:"Sélectionnez…", other:"Autre",
+      ph:"Ex. : nous avons PI System mais l'exploitation ne s'en sert pas ; les rapports de poste sortent encore d'un tableur.",
+      e_req:"Ce champ est obligatoire.", e_mail:"Saisissez une adresse courriel valide.",
+      errv:"Vérifiez les champs signalés pour continuer.",
+      okv:"Démonstration de la proposition : le formulaire valide les champs mais n'envoie pas encore. En production, il se connecte au CRM ou à informes@controlsi.com.pe.",
+      menu:"Menu", toTop:"Haut de page"
+    }
+  };
+
+  var ES = DATA.es, cur = "es";
+  document.querySelectorAll("[data-i18n]").forEach(function(el){ if(ES[el.getAttribute("data-i18n")] == null) ES[el.getAttribute("data-i18n")] = el.textContent; });
+  document.querySelectorAll("[data-i18n-html]").forEach(function(el){ if(ES[el.getAttribute("data-i18n-html")] == null) ES[el.getAttribute("data-i18n-html")] = el.innerHTML; });
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  function renderStack(L){
+    var host = document.getElementById("stack");
+    host.innerHTML = "";
+    L.lvl.forEach(function(r,i){
+      var open = i === 1;
+      var b = document.createElement("button");
+      b.type="button"; b.className="lvl"; b.id="lv-"+r[0];
+      b.setAttribute("aria-expanded", open?"true":"false");
+      b.setAttribute("aria-controls","bd-"+r[0]);
+      b.innerHTML='<span class="n">'+esc(r[0])+'</span><span class="t">'+esc(r[1])+'<i>'+esc(r[2])+'</i></span>'+
+        '<svg class="c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+      var p = document.createElement("div");
+      p.className="lb"; p.id="bd-"+r[0]; p.setAttribute("role","region"); p.setAttribute("aria-labelledby",b.id);
+      p.innerHTML=esc(r[3])+'<div class="tg">'+r[4].map(function(x){return "<span>"+esc(x)+"</span>";}).join("")+'</div>';
+      p.hidden = !open;
+      if(!RM){ b.style.animationDelay = (i*70)+"ms"; p.style.animationDelay = (i*70)+"ms"; }
+      b.addEventListener("click",function(){
+        var was = b.getAttribute("aria-expanded")==="true";
+        host.querySelectorAll(".lvl").forEach(function(o){o.setAttribute("aria-expanded","false");});
+        host.querySelectorAll(".lb").forEach(function(o){o.hidden=true;});
+        if(!was){ b.setAttribute("aria-expanded","true"); p.hidden=false; }
+      });
+      host.appendChild(b); host.appendChild(p);
+    });
+  }
+  var SVCLV = [["L1","L2"],["L2","L3"],["L3"],["L0","L1"],["L3","L4"],["L0","L1","L2","L3","L4"]];
+  function renderSvcs(L){
+    document.getElementById("svcs").innerHTML = L.svc.map(function(s,i){
+      return '<article class="svc" data-lv="'+SVCLV[i].join(" ")+'"><div class="lv">'+esc(s[0])+'</div><div><h3>'+esc(s[1])+'</h3><p class="d">'+esc(s[2])+'</p></div>'+
+        '<ul>'+s[3].map(function(x){return "<li><span>"+esc(x)+"</span></li>";}).join("")+'</ul></article>';
+    }).join("");
+    if(typeof wireRail === "function") wireRail();
+  }
+  function cells(rows){
+    return rows.map(function(r,i){
+      return '<article class="cell"><span class="num">'+("0"+(i+1)).slice(-2)+'</span><h4>'+esc(r[0])+'</h4><p>'+esc(r[1])+'</p><div class="kv">'+esc(r[2])+'</div></article>';
+    }).join("");
+  }
+  function renderTabs(L){
+    document.getElementById("pn-sec").innerHTML = cells(L.sec);
+    document.getElementById("pn-out").innerHTML = cells(L.out);
+  }
+  function renderForm(L){
+    var s1 = document.getElementById("c-sec"), s2 = document.getElementById("c-niv");
+    var v1 = s1.selectedIndex, v2 = s2.selectedIndex;
+    s1.innerHTML = '<option value="">'+esc(L.pick)+'</option>'+L.sec.map(function(r){return "<option>"+esc(r[0])+"</option>";}).join("")+'<option>'+esc(L.other)+'</option>';
+    s2.innerHTML = '<option value="">'+esc(L.pick)+'</option>'+L.lvls.map(function(x){return "<option>"+esc(x)+"</option>";}).join("");
+    if(v1>0) s1.selectedIndex = v1;
+    if(v2>0) s2.selectedIndex = v2;
+    document.getElementById("c-msg").setAttribute("placeholder", L.ph);
+  }
+
+  function apply(lang){
+    var L = DATA[lang] || DATA.es;
+    cur = lang;
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach(function(el){
+      var k = el.getAttribute("data-i18n"), v = (L[k] != null) ? L[k] : ES[k];
+      if(v != null) el.textContent = v;
+    });
+    document.querySelectorAll("[data-i18n-html]").forEach(function(el){
+      var k = el.getAttribute("data-i18n-html"), v = (L[k] != null) ? L[k] : ES[k];
+      if(v != null) el.innerHTML = v;
+    });
+    renderStack(L); renderSvcs(L); renderTabs(L); renderForm(L);
+    document.querySelectorAll(".lang button").forEach(function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-lang") === lang ? "true" : "false");
+    });
+    document.getElementById("burger").setAttribute("aria-label", L.menu || "Menú");
+    document.getElementById("toTop").setAttribute("aria-label", L.toTop || "Volver arriba");
+    var ok = document.getElementById("ok");
+    if(ok){ ok.className = "ok"; ok.textContent = ""; }
+    document.querySelectorAll(".err").forEach(function(e){ e.hidden = true; e.textContent = ""; });
+    document.querySelectorAll("[aria-invalid]").forEach(function(i){ i.removeAttribute("aria-invalid"); });
+    try{ localStorage.setItem("csi-lang", lang); }catch(e){}
+  }
+  document.querySelectorAll(".lang button").forEach(function(b){
+    b.addEventListener("click", function(){ apply(b.getAttribute("data-lang")); });
+  });
+
+  var start = "es";
+  try{
+    var sv = localStorage.getItem("csi-lang");
+    if(sv && DATA[sv]) start = sv;
+    else { var nv = (navigator.language||"es").slice(0,2).toLowerCase(); if(nv==="en"||nv==="fr") start = nv; }
+  }catch(e){}
+  apply(start);
+
+  /* ---------- menú móvil ---------- */
+  var bg = document.getElementById("burger"), mn = document.getElementById("mnav");
+  function closeM(){ bg.setAttribute("aria-expanded","false"); mn.hidden = true; }
+  bg.addEventListener("click", function(){
+    var open = bg.getAttribute("aria-expanded") === "true";
+    bg.setAttribute("aria-expanded", open ? "false" : "true");
+    mn.hidden = open;
+    if(!open){ var a = mn.querySelector("a"); if(a) a.focus(); }
+  });
+  mn.addEventListener("click", function(e){ if(e.target.closest("a")) closeM(); });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && bg.getAttribute("aria-expanded") === "true"){ closeM(); bg.focus(); }
+  });
+  window.addEventListener("resize", function(){ if(window.innerWidth > 980) closeM(); });
+
+  /* ---------- pestañas con teclado ---------- */
+  var tbs = document.getElementById("tb-sec"), tbo = document.getElementById("tb-out");
+  var pns = document.getElementById("pn-sec"), pno = document.getElementById("pn-out");
+  function tab(toSec, focus){
+    tbs.setAttribute("aria-selected", toSec?"true":"false");
+    tbo.setAttribute("aria-selected", toSec?"false":"true");
+    tbs.tabIndex = toSec ? 0 : -1;
+    tbo.tabIndex = toSec ? -1 : 0;
+    pns.hidden = !toSec; pno.hidden = toSec;
+    var shown = toSec ? pns : pno;
+    if(!RM){ shown.classList.remove("swap"); void shown.offsetWidth; shown.classList.add("swap"); }
+    if(focus) (toSec ? tbs : tbo).focus();
+  }
+  tbs.addEventListener("click", function(){ tab(true); });
+  tbo.addEventListener("click", function(){ tab(false); });
+  document.getElementById("tablist").addEventListener("keydown", function(e){
+    if(e.key === "ArrowRight" || e.key === "ArrowLeft"){ e.preventDefault(); tab(tbo.getAttribute("aria-selected")==="true", true); }
+    else if(e.key === "Home"){ e.preventDefault(); tab(true, true); }
+    else if(e.key === "End"){ e.preventDefault(); tab(false, true); }
+  });
+
+  /* ---------- riel de nivel sincronizado con los servicios ---------- */
+  var railIO = null;
+  function wireRail(){
+    var rail = document.getElementById("rail");
+    if(!rail || !("IntersectionObserver" in window)) return;
+    if(railIO) railIO.disconnect();
+    var vis = new Map();
+    function paint(){
+      var best = null, bv = 0;
+      vis.forEach(function(v, el){ if(v > bv){ bv = v; best = el; } });
+      var set = best ? (best.getAttribute("data-lv") || "").split(" ") : [];
+      rail.querySelectorAll("b").forEach(function(b){
+        b.classList.toggle("on", set.indexOf(b.getAttribute("data-lv")) > -1);
+      });
+    }
+    railIO = new IntersectionObserver(function(es){
+      es.forEach(function(e){ vis.set(e.target, e.isIntersecting ? e.intersectionRatio : 0); });
+      paint();
+    }, {rootMargin:"-35% 0px -40% 0px", threshold:[0,.25,.5,.75,1]});
+    document.querySelectorAll("#svcs .svc").forEach(function(el){ railIO.observe(el); });
+  }
+  wireRail();
+
+  /* ---------- hora local de la operación ---------- */
+  var clk = document.getElementById("clk");
+  if(clk){
+    var fmt = null;
+    try{ fmt = new Intl.DateTimeFormat("es-PE",{timeZone:"America/Lima",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}); }catch(e){}
+    if(fmt){
+      var tickClock = function(){ try{ clk.textContent = "LIMA " + fmt.format(new Date()); }catch(e){} };
+      tickClock();
+      setInterval(tickClock, 1000);
+    }
+  }
+
+  /* ---------- scroll-spy, progreso, volver arriba ---------- */
+  var secs = ["arq","svc","mer","tec","idi","con"];
+  var links = Array.prototype.slice.call(document.querySelectorAll('#dnav a[href^="#"], #mnav a[href^="#"]'));
+  var prog = document.getElementById("prog"), toTop = document.getElementById("toTop");
+  function mark(id){
+    links.forEach(function(a){
+      if(a.getAttribute("href") === "#"+id) a.setAttribute("aria-current","true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+  if("IntersectionObserver" in window){
+    var seen = {};
+    var ioS = new IntersectionObserver(function(es){
+      es.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? e.intersectionRatio : 0; });
+      var best = null, bv = 0;
+      secs.forEach(function(id){ if((seen[id]||0) > bv){ bv = seen[id]; best = id; } });
+      if(best) mark(best);
+    },{rootMargin:"-25% 0px -55% 0px",threshold:[0,.2,.5,1]});
+    secs.forEach(function(id){ var el = document.getElementById(id); if(el) ioS.observe(el); });
+  }
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var y = h.scrollTop || document.body.scrollTop;
+    prog.style.width = (max > 0 ? (y/max)*100 : 0) + "%";
+    toTop.classList.toggle("on", y > 700);
+  }
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+  toTop.addEventListener("click", function(){
+    window.scrollTo({top:0, behavior: RM ? "auto" : "smooth"});
+    document.querySelector(".brand").focus();
+  });
+
+  /* ---------- revelado ---------- */
+  var rvs = document.querySelectorAll(".rv, .stg");
+  if("IntersectionObserver" in window && !RM){
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
+    },{rootMargin:"0px 0px -8% 0px",threshold:.08});
+    rvs.forEach(function(el){ io.observe(el); });
+  } else { rvs.forEach(function(el){ el.classList.add("in"); }); }
+
+  /* ---------- contadores ---------- */
+  var mg = document.getElementById("mg");
+  if(mg){
+    var run = function(){
+      mg.querySelectorAll("u[data-to]").forEach(function(u){
+        var to = parseInt(u.getAttribute("data-to"),10), t0 = null, dur = 1050;
+        if(RM){ u.textContent = to; return; }
+        function step(ts){
+          if(!t0) t0 = ts;
+          var k = Math.min(1,(ts-t0)/dur), e = 1-Math.pow(1-k,3);
+          u.textContent = Math.round(to*e);
+          if(k<1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
+      mg.querySelectorAll(".bar").forEach(function(b){ b.style.width = b.getAttribute("data-w")+"%"; });
+    };
+    if("IntersectionObserver" in window){
+      var io2 = new IntersectionObserver(function(es){
+        es.forEach(function(e){ if(e.isIntersecting){ run(); io2.disconnect(); } });
+      },{threshold:.25});
+      io2.observe(mg);
+    } else { run(); }
+  }
+
+  /* ---------- formulario con validación en línea ---------- */
+  var f = document.getElementById("f"), okb = document.getElementById("ok");
+  var nom = document.getElementById("c-nom"), mail = document.getElementById("c-mail");
+  function setErr(input, msgEl, msg){
+    if(msg){ input.setAttribute("aria-invalid","true"); msgEl.textContent = msg; msgEl.hidden = false; }
+    else { input.removeAttribute("aria-invalid"); msgEl.textContent = ""; msgEl.hidden = true; }
+  }
+  function checkNom(){
+    var L = DATA[cur] || DATA.es;
+    var bad = !nom.value.trim();
+    setErr(nom, document.getElementById("e-nom"), bad ? L.e_req : "");
+    return !bad;
+  }
+  function checkMail(){
+    var L = DATA[cur] || DATA.es, v = mail.value.trim();
+    var msg = !v ? L.e_req : (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? L.e_mail : "");
+    setErr(mail, document.getElementById("e-mail"), msg);
+    return !msg;
+  }
+  nom.addEventListener("blur", checkNom);
+  mail.addEventListener("blur", checkMail);
+  nom.addEventListener("input", function(){ if(nom.getAttribute("aria-invalid")) checkNom(); });
+  mail.addEventListener("input", function(){ if(mail.getAttribute("aria-invalid")) checkMail(); });
+  f.addEventListener("submit", function(e){
+    e.preventDefault();
+    var L = DATA[cur] || DATA.es;
+    var a = checkNom(), b = checkMail();
+    if(!a || !b){
+      okb.className = "ok on"; okb.style.borderColor = "var(--amber)"; okb.textContent = L.errv;
+      (!a ? nom : mail).focus();
+      return;
+    }
+    okb.className = "ok on"; okb.style.borderColor = "var(--teal)"; okb.textContent = L.okv;
+  });
+})();
+</script>
+
+</body></html>
